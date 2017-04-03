@@ -4,7 +4,6 @@ from scipy import signal
 
 from locate import locate
 
-partial = True;
 def autofocus_batch(images, kernel, rotation=0):
     
     low = 0
@@ -16,7 +15,7 @@ def autofocus_batch(images, kernel, rotation=0):
     while True:
         magnitudes = ([], [])
         for i in filter(lambda x: x < len(images), range(low, high + step, step)):
-            results, filtered, peaks, thresholded, modified_kernel = locate(kernel, images[i], rotation=rotation, partial=partial)
+            results, filtered, peaks, thresholded, modified_kernel = locate(kernel, images[i], rotation=rotation, partial=True)
             
             #edge_kernel = np.array([[-1., 0., 1.], [-2., 0., 2.], [-1., 0., 1.]])
             #flipped_kernel = np.fliplr(np.flipud(edge_kernel))
