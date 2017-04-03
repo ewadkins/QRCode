@@ -8,8 +8,14 @@ import matplotlib.patches as patches
 import math
 from time import time
 
-def locate(kernel, image, rotation=0, partial=False):
+def gaussian_filter(size, sigma):
+    x, y = np.mgrid[-size//2 + 1:size//2 + 1, -size//2 + 1:size//2 + 1]
+    g = np.exp(-((x**2 + y**2)/(2.0*sigma**2)))
+    return g/g.sum()
 
+###ndimage.convolve([[0, 0, 0, 0, 0], [0, 1, 1, 1, 0], [0, 1, 1, 1, 0],[0, 1, 1, 1, 0], [0, 0, 0, 0, 0]], [[1, 1, 1], [1, 1, 1],[1, 1, 1]], mode='nearest')
+
+def locate(kernel, image, rotation=0, partial=False):
     start = time()
 
     # Process kernel
@@ -28,21 +34,22 @@ def locate(kernel, image, rotation=0, partial=False):
         kernel = gaussian_filter(size, sigma);
         kernel -= (np.max(kernel) + np.min(kernel)) / 2
         kernel -= 0.0003
+        #kernel -= 0.0004
         #kernel -= 0.0001
         kernel /= np.abs(np.sum(kernel))
+        #kernel = np.fliplr(np.flipud(kernel))
         #flipped_kernel = np.fliplr(np.flipud(kernel))
-        #padded_image = np.pad(image, [(kernel.shape[1]/2, kernel.shape[1]/2 - even_width), (kernel.shape[0]/2, kernel.shape[0]/2 - even_height)], mode='edge')
-        #return signal.fftconvolve(padded_image, flipped_kernel, mode='valid')
         return ndimage.convolve(image, kernel, mode='nearest')
-
-    def gaussian_filter(size, sigma):
-        x, y = np.mgrid[-size//2 + 1:size//2 + 1, -size//2 + 1:size//2 + 1]
-        g = np.exp(-((x**2 + y**2)/(2.0*sigma**2)))
-        return g/g.sum()
-
+        #return signal.fftconvolve(image, kernel, mode='valid')
+        #image = np.pad(image, [(kernel.shape[1]/2, kernel.shape[1]/2), (kernel.shape[0]/2, kernel.shape[0]/2)], mode='constant')
+        #result = ndimage.convolve(image, kernel, mode='nearest')
+        #return result[kernel.shape[0]/2:result.shape[0] - kernel.shape[0]/2, kernel.shape[1]/2:result.shape[1] - kernel.shape[1]/2]
+    
     #kernel = peak_filter(kernel, 10, 4)
 
     flipped_kernel = np.fliplr(np.flipud(kernel)) # Flip kernel for use in convolution
+    
+    #flipped_kernel = peak_filter(flipped_kernel, 10, 4)
     
     kernel_width = kernel.shape[1]
     kernel_height = kernel.shape[0]
@@ -100,9 +107,9 @@ def locate(kernel, image, rotation=0, partial=False):
     peaks = peak_filter(filtered, 10, 4)
     
     #peaks = filtered
-    
+                
     if partial:
-        return [], filtered, peaks, None, kernel 
+        return [], filtered, peaks, None, kernel
 
     test4 = time()
     ###print 'Took ' + str(int((test4 - test3) * 1000)) + ' ms'
@@ -270,17 +277,21 @@ assert original_kernel.shape[0] == original_kernel.shape[1]
 size_low = 30
 size_high = 90
 size_step = 5
+size_decrease = 6
 
 rotation_low = -180
 rotation_high = 180
 rotation_step = 5
-rotation_min_step = 0.001
+rotation_decrease = 8
+rotation_min_step = 0.01
 
 def frange(x, y, jump):
     while x < y:
         yield x
         x += jump
 
+test1 = time()
+        
 size = None
 rotation = None
 partial = True
@@ -322,17 +333,17 @@ while True:
     done = size_step == 1 and rotation_step == rotation_min_step
 
     if size_step > 1 or size_low != size_high:
-        size_range = (size_high - size_low) / 4
+        size_range = (size_high - size_low) / int(size_decrease)
         size_low = size - size_range / 2
         size_high = size + size_range / 2
-        size_step = max(1, size_step / 4)
+        size_step = max(1, int(round(float(size_step) / size_decrease)))
         print 'New size:', size_low, size_high, size_step
     
     if rotation_step > rotation_min_step or rotation_low != rotation_high:
-        rotation_range = (rotation_high - rotation_low) / 4.
+        rotation_range = (rotation_high - rotation_low) / float(rotation_decrease)
         rotation_low = rotation - rotation_range / 2
         rotation_high = rotation + rotation_range / 2
-        rotation_step = max(rotation_min_step, rotation_step / 4.)
+        rotation_step = max(rotation_min_step, rotation_step / float(rotation_decrease))
         print 'New rotation:', rotation_low, rotation_high, rotation_step
 
 #    for i in range(len(orientation_results)):
@@ -345,6 +356,9 @@ while True:
     if done:
         break
 
+test2 = time()
+print 'Took ' + str(int((test2 - test1) * 1000)) + ' ms'
+        
 size = 41
 rotation = -19.8553024902
 
