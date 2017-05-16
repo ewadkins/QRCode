@@ -62,7 +62,7 @@ def locate(kernel, image, rotation=0, partial=False):
     threshold = 0.3
     regions = None
 
-    # For thresholds [0.50, 0.55, ..., 0.95, 1.00]
+    # For thresholds
     for threshold in [x * 0.05 for x in range(10, 21)]:
         thresholded = threshold_image(peaks, threshold)
         blobs, num_blobs = ndimage.label(thresholded)

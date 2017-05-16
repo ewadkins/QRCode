@@ -6,7 +6,6 @@ import matplotlib.patches as patches
 import glob
 import sys
 import base64
-import time
 
 from locate import locate
 from calibrate import calibrate
@@ -29,29 +28,63 @@ def display(locations, image, filtered, peaks, thresholded, kernel):
 
     f1 = plt.figure(figsize=(16, 4))
 
+#    ax1 = f1.add_subplot(221)
+#    ax1.set_title('(a) input image\n')
+#    im1 = ax1.imshow(image, cmap='gray')
+#    draw_rectangles(ax1, locations, kernel_width, kernel_height)
+#    #f1.colorbar(im1)
+#
+#    ax2 = f1.add_subplot(222)
+#    ax2.set_title('(b) filtered image\n')
+#    im2 = ax2.imshow(filtered, cmap='gray')
+#    draw_rectangles(ax2, locations, kernel_width, kernel_height)
+#    #f1.colorbar(im2)
+#
+#    ax3 = f1.add_subplot(223)
+#    ax3.set_title('(c) peaks\n')
+#    im3 = ax3.imshow(peaks, cmap='gray')
+#    draw_rectangles(ax3, locations, kernel_width, kernel_height)
+#    #f1.colorbar(im3)
+#
+#    ax4 = f1.add_subplot(224)
+#    ax4.set_title('(d) thresholded image\n')
+#    im4 = ax4.imshow(thresholded, cmap='gray')
+#    draw_rectangles(ax4, locations, kernel_width, kernel_height)
+#    #f1.colorbar(im4)
+    
     ax1 = f1.add_subplot(151)
+    ax1.set_title('(a) original image\n')
     im1 = ax1.imshow(image, cmap='gray')
     draw_rectangles(ax1, locations, kernel_width, kernel_height)
-    f1.colorbar(im1)
+    #f1.colorbar(im1)
 
     ax2 = f1.add_subplot(152)
+    ax2.set_title('(b) filtered image\n')
     im2 = ax2.imshow(filtered, cmap='gray')
     draw_rectangles(ax2, locations, kernel_width, kernel_height)
-    f1.colorbar(im2)
+    #f1.colorbar(im2)
 
     ax3 = f1.add_subplot(153)
+    ax3.set_title('(c) peaks\n')
     im3 = ax3.imshow(peaks, cmap='gray')
     draw_rectangles(ax3, locations, kernel_width, kernel_height)
-    f1.colorbar(im3)
+    #f1.colorbar(im3)
 
     ax4 = f1.add_subplot(154)
+    ax4.set_title('(d) thresholded image\n')
     im4 = ax4.imshow(thresholded, cmap='gray')
     draw_rectangles(ax4, locations, kernel_width, kernel_height)
-    f1.colorbar(im4)
+    #f1.colorbar(im4)
 
     ax5 = f1.add_subplot(155)
+    ax5.set_title('(e) kernel\n')
     im5 = ax5.imshow(kernel, cmap='gray')
-    f1.colorbar(im5)
+    #f1.colorbar(im5)
+
+#    ax1 = f1.add_subplot(111)
+#    ax1.set_title('Correlation Kernel\n')
+#    im1 = ax1.imshow(kernel, cmap='gray')
+#    #f1.colorbar(im5)
 
     def get_crop(loc, w, h):
         return image[max(0, int(loc[1])-h/2) : min(int(loc[1])+h/2, image_height), max(0, int(loc[0])-w/2) : min(int(loc[0])+w/2, image_width)]
@@ -75,19 +108,7 @@ def display(locations, image, filtered, peaks, thresholded, kernel):
 
 # Detection
 
-def _detect(image, kernel_path, calibration_path, show_display):
-    # Load kernel
-    kernel = ndimage.imread(kernel_path, flatten=True)
-    
-    # Load calibration settings
-    with open(calibration_path) as f:
-        content = f.readlines()
-        size = int(content[0])
-        rotation = float(content[1])
-
-    # Resizing image
-    kernel = misc.imresize(kernel, (size, size)).astype(float)
-
+def _detect(image, kernel, show_display):
     results, filtered, peaks, thresholded, modified_kernel = locate(kernel, image, rotation=rotation)
     locations = []
     magnitudes = [0]
@@ -100,22 +121,16 @@ def _detect(image, kernel_path, calibration_path, show_display):
 
 # Calibration
 
-def _calibrate(image, kernel_path, calibration_path):
-    # Load kernel
-    kernel = ndimage.imread(kernel_path, flatten=True)
-    
+def _calibrate(image, kernel):
     size, rotation = calibrate(kernel, image)
     f = open(calibration_path, 'w')
     f.write(str(size) + '\n' + str(rotation) + '\n')
 
 ###################################################################################################
 
-# Autofocus (batch)
+# Autofocus (batch) # DEPRECATED
 
-def _autofocus_batch(image_directory, kernel_path, calibration_path, show_display):
-    # Load kernel
-    kernel = ndimage.imread(kernel_path, flatten=True)
-    
+def _autofocus_batch(image_directory, kernel, show_display):
     # Load images
     images = []
     # Loads images and sorts based on number included in name
@@ -126,16 +141,6 @@ def _autofocus_batch(image_directory, kernel_path, calibration_path, show_displa
         images.append((image_id, image))
     images.sort()
     images = map(lambda x: x[1], images)
-    
-    # Load calibration settings
-    with open(calibration_path) as f:
-        content = f.readlines()
-        size = int(content[0])
-        rotation = float(content[1])
-
-    # Resizing image
-    kernel = misc.imresize(kernel, (size, size)).astype(float)
-    
     
     x = []
     intensities = []
@@ -157,46 +162,17 @@ def _autofocus_batch(image_directory, kernel_path, calibration_path, show_displa
 
 ###################################################################################################
 
-# Autofocus (stream)
+# Autofocus (step)
 
-def _autofocus():
-    def output(s):
-        sys.stdout.write('#' + str(s) + '\n')
-        sys.stdout.flush()
-
-    def get_input():
-        return sys.stdin.readline()
+def _autofocus(image, state, kernel):
+    def output(delta, state):
+        print 'OUTPUT ' + str(delta) + ' ' + state
     
-    # Load kernel
-    kernel = ndimage.imread(kernel_path, flatten=True)
-    
-    # Load calibration settings
-    with open(calibration_path) as f:
-        content = f.readlines()
-        size = int(content[0])
-        rotation = float(content[1])
+    # Get delta
+    delta = 1
+    delta, state = autofocus_step(image, state, kernel, rotation=rotation)
 
-    # Resizing image
-    kernel = misc.imresize(kernel, (size, size)).astype(float)
-
-    #### Start closed loop process
-    output(-1) # Request first image
-    while True:
-        line = get_input() # Get response
-        
-        parts = line.split(' ')
-        width = int(parts[0])
-        height = int(parts[1])
-        data = parts[2]
-        
-        image = getImageFromData(data, width, height)
-        
-        # Get delta
-        delta = 1
-        delta = autofocus_step(image, kernel, rotation=rotation)
-        time.sleep(0.25)
-        
-        output(delta) # Communicate delta
+    output(delta, state) # Communicate delta
         
 ###################################################################################################
 
@@ -207,11 +183,11 @@ def getImageFromPath(path):
 
 def getImageFromData(data, width, height):
     buf = base64.b64decode(data)
-    return np.reshape(np.frombuffer(buf, np.float32), (height, width))
+    return np.reshape(np.frombuffer(buf, dtype=np.uint8), (height, width))
 
-def getDataFromPath(path):
-    image = ndimage.imread(path, flatten=True)
-    return base64.b64encode(image)
+def getDataFromImage(image):
+    buf = np.getbuffer(np.array(image, dtype=np.uint8))
+    return base64.b64encode(buf)
         
 ###################################################################################################
 
@@ -248,44 +224,68 @@ calibration_path = 'calibration.txt'
 
 #print sys.argv[5]
 
-try:
-    if sys.argv[1] == 'calibrate':
-        if sys.argv[2] == 'data':
-            width = int(sys.argv[3])
-            height = int(sys.argv[4])
-            data = sys.argv[5]
-            image = getImageFromData(data, width, height)
-            _calibrate(image, kernel_path, calibration_path)
-        elif sys.argv[2] == 'path':
-            path = sys.argv[3]
-            image = getImageFromPath(path)
-            _calibrate(image, kernel_path, calibration_path)
-    elif sys.argv[1] == 'detect':
-        if sys.argv[2] == 'data':
-            width = sys.argv[3]
-            height = sys.argv[4]
-            data = sys.argv[5]
-            image = getImageFromData(data, width, height)
-            _detect(image, kernel_path, calibration_path, True)
-        elif sys.argv[2] == 'path':
-            path = sys.argv[3]
-            image = getImageFromPath(path)
-            _detect(image, kernel_path, calibration_path, True)
-    elif sys.argv[1] == 'autofocus':
-        _autofocus()
+#try:
+# Load kernel
+kernel = ndimage.imread(kernel_path, flatten=True)
+
+# Load calibration settings
+with open(calibration_path) as f:
+    content = f.readlines()
+    size = int(content[0])
+    rotation = float(content[1])
+
+# Resizing image
+kernel = misc.imresize(kernel, (size, size)).astype(float)
+
+if sys.argv[1] == 'calibrate':
+    if sys.argv[2] == 'data':
+        width = int(sys.argv[3])
+        height = int(sys.argv[4])
+        data = sys.argv[5]
+        image = getImageFromData(data, width, height)
+        _calibrate(image, kernel)
+    elif sys.argv[2] == 'path':
+        path = sys.argv[3]
+        image = getImageFromPath(path)
+        _calibrate(image, kernel)
+elif sys.argv[1] == 'detect':
+    if sys.argv[2] == 'data':
+        width = int(sys.argv[3])
+        height = int(sys.argv[4])
+        data = sys.argv[5]
+        image = getImageFromData(data, width, height)
+        _detect(image, kernel, True)
+    elif sys.argv[2] == 'path':
+        path = sys.argv[3]
+        image = getImageFromPath(path)
+        _detect(image, kernel, True)
+elif sys.argv[1] == 'autofocus':
+    if sys.argv[2] == 'data':
+        width = int(sys.argv[3])
+        height = int(sys.argv[4])
+        data = sys.argv[5]
+        state = sys.argv[6] if len(sys.argv) > 6 else None
+        image = getImageFromData(data, width, height)
+        _autofocus(image, state, kernel)
+    elif sys.argv[2] == 'path':
+        path = sys.argv[3]
+        state = sys.argv[4] if len(sys.argv) > 4 else None
+        image = getImageFromPath(path)
+        _autofocus(image, state, kernel)
         
-except Exception, err:
-    print err
-    print
-    print
-    print
-    print 'To calibrate:'
-    print '\tpython main.py calibrate data <width> <height> <img_data>'
-    print '\tpython main.py calibrate path <img_path>'
-    print 'To detect QR codes:'
-    print '\tpython main.py detect data <width> <height> <img_data>'
-    print '\tpython main.py detect path <img_path>'
-    print 'To begin autofocus process:'
-    print '\tpython main.py autofocus'
-    print
-    print 'Note: Must calibrate on example image before detection or autofocusing'
+#except Exception, err:
+#    print err
+#    print
+#    print
+#    print
+#    print 'To calibrate:'
+#    print '\tpython main.py calibrate data <width> <height> <img_data>'
+#    print '\tpython main.py calibrate path <img_path>'
+#    print 'To detect QR codes:'
+#    print '\tpython main.py detect data <width> <height> <img_data>'
+#    print '\tpython main.py detect path <img_path>'
+#    print 'To autofocus:'
+#    print '\tpython main.py autofocus data <width> <height> <img_data> (state)'
+#    print '\tpython main.py autofocus path <img_path> (state)'
+#    print
+#    print 'Note: Must calibrate on example image before detection or autofocusing'

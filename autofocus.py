@@ -55,77 +55,38 @@ def autofocus_batch(images, kernel, rotation=0):
     return val
 
 
-#last = None
-#last = None
-#decreasingCount = 0
-#phase = 1
-#direction = -1
-#
-#step = 10
-#initial_step = step
-#left_bound = None
-#right_bound = None
-#def autofocus_step(image, kernel, rotation=0):
-#    global last, last, decreasingCount, phase, direction, step
-#    val = np.mean(image)
-#    
-#    if last is None: # If first point
-#        last = val
-#        return -step # Back away from surface, and collect another data point
-#    decreasing = val < last
-#    if decreasing:
-#        decreasingCount += 1 * min(float(step * 2) / initial_step, 1)
-#    else:
-#        decreasingCount = max(0, decreasingCount - 1 * min(float(step * 2) / initial_step, 1))
-#        
-#    last = val
-#    
-#    if decreasingCount >= 2: # if consecutive data points decrease in val, change direction
-#        direction *= -1
-#        decreasingCount = 0
-#        print 'Changing direction'
-#        step = max(1, step / 2)
-#        
-#    if phase == 1: # Determine direction of peak
-#        direction *= -1 if decreasing else 1 # Change direction if next data point is decreasing val
-#        print 'Found direction: ' + str(direction)
-#        decreasingCount = 0
-#        phase = 2 # Continue to phase 2
-#        return step * direction
-#    
-#    if phase == 2:
-#        return step * direction
-#    
-#    #results, filtered, peaks, thresholded, modified_kernel = locate(kernel, image, rotation=rotation, partial=True)
-#    return 1
-
-
-
-last = None
-decreasingCount = 0
-direction = -1
-phase = 1
 step1 = 10
 margin1 = 4
 step2 = 1
 margin2 = 2
 index = 0
-xs = []
-ys = []
-def autofocus_step(image, kernel, rotation=0):
-    global last, decreasingCount, phase, direction, step, index, xs, ys
+def autofocus_step(image, state, kernel, rotation=0):
+    # Initial state
+    global index
+    last = None
+    decreasingCount = 0
+    direction = -1
+    phase = 1
+    xs = []
+    ys = []
     
-    if phase == 5:
-        return 0
-    
-    val = np.mean(image) if phase < 3 else np.max(locate(kernel, image, rotation=rotation, partial=True)[2])
+    if state is not None:
+        index, last, decreasingCount, direction, phase, xs, ys = map(eval, state.split(':'))
+        
+    def state_string():
+        return ':'.join(map(str, [index, last, decreasingCount, direction, phase, xs, ys])).replace(' ', '')
     
     def choose(x):
         global index
         xs.append(index)
         ys.append(val)
         index += x
-        return x
+        return x, state_string()
+    
+    if phase == 5:
+        return 0, ''
+    
+    val = np.mean(image) if phase < 3 else np.max(locate(kernel, image, rotation=rotation, partial=True)[2])
     
     if last is None: # If first point
         last = val
@@ -153,10 +114,12 @@ def autofocus_step(image, kernel, rotation=0):
                 result = -b / (2 * a)
             else:
                 result = sorted(zip(xs, ys), lambda a, b: int(np.sign(b[1] - a[1])))[0][0]
-            displacement = choose(result - index)
+            phase += 1
             xs = [] # Reset for filter search
             ys = []
             last = None
-            phase += 1
-            return displacement
+            displacement = result - index
+            delta = result - index
+            index += displacement
+            return delta, state_string()
         return choose((step1 if phase < 3 else step2) * direction)
