@@ -8,7 +8,7 @@ import re
 import glob
 import matplotlib.pyplot as plt
 
-pos = 80
+pos = 50
 
 def getImageFromPath(path):
     return ndimage.imread(path, flatten=True).astype(np.uint8)
@@ -83,6 +83,8 @@ state = ''
 delta = None
 while state is not None:
     image, width, height = getImageInfo(pos)
+    plt.imshow(image, cmap="gray")
+    plt.pause(0.00001)
     data = getDataFromImage(image)
     args = ['ipython', '--', 'main.py', 'autofocus', 'data', str(width), str(height), data]
     if state:
@@ -99,3 +101,4 @@ while state is not None:
         print delta, state
     else:
         raise 'Output formatted incorrectly'
+plt.show()

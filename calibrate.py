@@ -1,5 +1,7 @@
 import numpy as np
 from scipy import misc
+#import matplotlib.pyplot as plt
+#import matplotlib.patches as patches
 
 from locate import locate
 
@@ -9,14 +11,19 @@ def calibrate(original_kernel, image):
 
     size_low = 30
     size_high = 90
-    size_step = 5
+    size_step = 5 #5
     size_decrease = 6
 
     rotation_low = -180
     rotation_high = 180
-    rotation_step = 5
-    rotation_decrease = 8
+    rotation_step = 5 #5
+    rotation_decrease = 12
     rotation_min_step = 0.01
+    
+#    original_size_low = size_low
+#    original_size_high = size_high
+#    original_rotation_low = rotation_low
+#    original_rotation_high = rotation_high
 
     def frange(x, y, jump):
         while x < y:
@@ -25,7 +32,12 @@ def calibrate(original_kernel, image):
 
     size = None
     rotation = None
+#    domain_bounds = []
+#    domain_map = []
+#    map_domain = True
     while True:
+#        fig = plt.figure()
+#        domain_bounds.append((rotation_low, rotation_high, size_low, size_high))
         master_results = ([], [])
         max_magnitudes = ([], [])
         orientation_results = []
@@ -50,6 +62,30 @@ def calibrate(original_kernel, image):
             orientation_results.append(rotation_results)
             max_magnitudes[0].append(s)
             max_magnitudes[1].append(max_magnitude)
+        
+#            if map_domain:
+#                domain_map.insert(0, rotation_results[1])
+#            fig.clear()
+#            ax = fig.add_subplot(111)
+#            for i in range(len(domain_bounds)):
+#                ax.add_patch(patches.Rectangle((domain_bounds[i][0], domain_bounds[i][2]), domain_bounds[i][1] - domain_bounds[i][0], domain_bounds[i][3] - domain_bounds[i][2], lw=3, ec='m', fc='none'))
+#            ax.imshow(domain_map, aspect='auto', extent=[original_rotation_low, original_rotation_high, original_size_low, original_size_high])
+#            plt.title('Calibration Search Space')
+#            plt.xlabel('Orientation (degrees)')
+#            plt.ylabel('Scale (px)')
+#            plt.pause(0.00001)
+        
+#        map_domain = False
+#        fig.clear()
+#        ax = fig.add_subplot(111)
+#        for i in range(len(domain_bounds)):
+#            ax.add_patch(patches.Rectangle((domain_bounds[i][0], domain_bounds[i][2]), domain_bounds[i][1] - domain_bounds[i][0], domain_bounds[i][3] - domain_bounds[i][2], lw=3, ec='m', fc='none'))
+#            ax.imshow(domain_map, aspect='auto', extent=[original_rotation_low, original_rotation_high, original_size_low, original_size_high])
+#        plt.title('Calibration Search Space')
+#        plt.xlabel('Orientation (degrees)')
+#        plt.ylabel('Scale (px)')
+#        print domain_bounds
+#        plt.show()
 
         print 'Size:', size_low, size_high, size_step
         print 'Rotation:', rotation_low, rotation_high, rotation_step

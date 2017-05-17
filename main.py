@@ -226,7 +226,7 @@ calibration_path = 'calibration.txt'
 
 #try:
 # Load kernel
-kernel = ndimage.imread(kernel_path, flatten=True)
+original_kernel = ndimage.imread(kernel_path, flatten=True)
 
 # Load calibration settings
 with open(calibration_path) as f:
@@ -235,7 +235,7 @@ with open(calibration_path) as f:
     rotation = float(content[1])
 
 # Resizing image
-kernel = misc.imresize(kernel, (size, size)).astype(float)
+kernel = misc.imresize(original_kernel, (size, size)).astype(float)
 
 if sys.argv[1] == 'calibrate':
     if sys.argv[2] == 'data':
@@ -243,11 +243,11 @@ if sys.argv[1] == 'calibrate':
         height = int(sys.argv[4])
         data = sys.argv[5]
         image = getImageFromData(data, width, height)
-        _calibrate(image, kernel)
+        _calibrate(image, original_kernel)
     elif sys.argv[2] == 'path':
         path = sys.argv[3]
         image = getImageFromPath(path)
-        _calibrate(image, kernel)
+        _calibrate(image, original_kernel)
 elif sys.argv[1] == 'detect':
     if sys.argv[2] == 'data':
         width = int(sys.argv[3])
